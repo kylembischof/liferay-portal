@@ -789,6 +789,12 @@ const SelectSubscription = ({
 										return displayAlertType;
 									}
 
+									if (selected) {
+										setAvailableActivationKeysTotal(
+											numberOfActivationKeysAvailable
+										);
+									}
+
 									return selected && displayAlertType;
 								};
 
