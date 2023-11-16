@@ -54,11 +54,12 @@ const ActivationKeysTable = ({
 	const [isVisibleModal, setIsVisibleModal] = useState(false);
 	const [downloadStatus, setDownloadStatus] = useState('');
 	const {state} = useLocation();
-	const {setHasSideMenu} = useOutletContext();
+	const {setHasQuickLinksPanel, setHasSideMenu} = useOutletContext();
 
 	useEffect(() => {
+		setHasQuickLinksPanel(true);
 		setHasSideMenu(true);
-	}, [setHasSideMenu]);
+	}, [setHasSideMenu, setHasQuickLinksPanel]);
 
 	const [
 		newKeyGeneratedAlertStatus,

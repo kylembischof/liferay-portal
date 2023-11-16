@@ -17,13 +17,14 @@ const DXPCloud = () => {
 	const [
 		{project, sessionId, subscriptionGroups, userAccount},
 	] = useCustomerPortal();
-	const {setHasSideMenu} = useOutletContext();
+	const {setHasQuickLinksPanel, setHasSideMenu} = useOutletContext();
 	const [dxpCloudEnvironment, setDxpCloudEnvironment] = useState();
 	const {client} = useAppPropertiesContext();
 
 	useEffect(() => {
+		setHasQuickLinksPanel(true);
 		setHasSideMenu(true);
-	}, [setHasSideMenu]);
+	}, [setHasSideMenu, setHasQuickLinksPanel]);
 
 	useEffect(() => {
 		const getDxpCloudEnvironmentData = async () => {
