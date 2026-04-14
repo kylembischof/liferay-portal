@@ -4,13 +4,12 @@
  */
 
 export default function getKebabCase(value: string) {
-	return (
-		value &&
-		value
-			.match(
-				/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g
-			)
-			?.join('-')
-			.toLowerCase()
-	);
+	if (!value) return value;
+	const sanitizedValue = value.replace(/&/g, 'and');
+	return sanitizedValue
+		.match(
+			/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g
+		)
+		?.join('-')
+		.toLowerCase();
 }

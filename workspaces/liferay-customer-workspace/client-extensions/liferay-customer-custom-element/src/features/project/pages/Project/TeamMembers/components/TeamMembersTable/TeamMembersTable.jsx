@@ -474,11 +474,17 @@ const TeamMembersTable = ({
 												setCurrentUserEditing();
 												setSelectedAccountRoleItem();
 											}}
-											onEdit={() =>
+											onEdit={() => {
 												setCurrentUserEditing(
 													userAccount
-												)
-											}
+												);
+												setSelectedAccountRoleItem(
+													checkIsValidRole(userAccount).map(roleName => {
+														const roleObj = availableAccountRoles.find(r => r.name === roleName);
+														return roleObj ? { label: roleObj.name, value: roleObj.id, raysourceName: roleObj.raysourceName } : null;
+													}).filter(Boolean)
+												);
+											}}
 											onRemove={() => {
 												setCurrentUserRemoving(
 													userAccount
@@ -493,56 +499,46 @@ const TeamMembersTable = ({
 											userAccount={userAccount}
 										/>
 									),
-									role: (
+									partnerRole: (
 										<RolesColumn
 											accountRoles={availableAccountRoles}
-											availableSupportSeatsCount={
-												availableSupportSeatsCount
-											}
-											currentRoleBriefName={checkIsValidRole(
-												userAccount
-											)}
-											edit={
-												userAccount?.id ===
-												currentUserEditing?.id
-											}
-											hasAccountSupportSeatRole={
-												userAccount
-													?.selectedAccountSummary
-													?.hasSupportSeatRole
-											}
-											onClick={(
-												selectedAccountRoleItem
-											) =>
-												setSelectedAccountRoleItem(
-													selectedAccountRoleItem
-												)
-											}
-											supportSeatsCount={
-												supportSeatsCount
-											}
+											availableSupportSeatsCount={availableSupportSeatsCount}
+											category="partner"
+											currentRoleBriefName={checkIsValidRole(userAccount)}
+											edit={userAccount?.id === currentUserEditing?.id}
+											hasAccountSupportSeatRole={userAccount?.selectedAccountSummary?.hasSupportSeatRole}
+											selectedAccountRoleItems={selectedAccountRoleItem}
+											setSelectedAccountRoleItems={setSelectedAccountRoleItem}
+											supportSeatsCount={supportSeatsCount}
 										/>
+									),
+									supportRole: (
+										<div className="d-flex align-items-center">
+											{userAccount?.selectedAccountSummary?.hasSupportSeatRole && !userAccount.isLiferayStaff && !currentUserEditing && (
+												<ClayIcon className="text-brand-primary-darken-2 mr-2" symbol="check-circle-full" />
+											)}
+											<RolesColumn
+												accountRoles={availableAccountRoles}
+												availableSupportSeatsCount={availableSupportSeatsCount}
+												category="support"
+												currentRoleBriefName={checkIsValidRole(userAccount)}
+												edit={userAccount?.id === currentUserEditing?.id}
+												hasAccountSupportSeatRole={userAccount?.selectedAccountSummary?.hasSupportSeatRole}
+												selectedAccountRoleItems={selectedAccountRoleItem}
+												setSelectedAccountRoleItems={setSelectedAccountRoleItem}
+												supportSeatsCount={supportSeatsCount}
+											/>
+										</div>
 									),
 									status: (
 										<StatusTag
 											currentStatus={
-												userAccount.lastLoginDate ||
-												userAccount.dateCreated <=
-													importDate
+												userAccount.lastLoginDate || userAccount.dateCreated <= importDate
 													? STATUS_TAG_TYPES.active
 													: STATUS_TAG_TYPES.invited
 											}
 										/>
 									),
-									supportSeat: userAccount
-										?.selectedAccountSummary
-										?.hasSupportSeatRole &&
-										!userAccount.isLiferayStaff && (
-											<ClayIcon
-												className="text-brand-primary-darken-2"
-												symbol="check-circle-full"
-											/>
-										),
 								})
 							)}
 						/>

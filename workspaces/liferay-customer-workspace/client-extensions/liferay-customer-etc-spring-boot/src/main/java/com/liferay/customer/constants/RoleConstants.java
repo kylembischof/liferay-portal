@@ -21,25 +21,32 @@ public class RoleConstants {
 
 	public static final String NAME_PARTNER = "Partner";
 
-	public static final String NAME_PARTNER_MANAGER = "Partner Manager";
+	public static final String NAME_PARTNER_DELIVERY_TECHNICAL =
+		"Partner Delivery Technical";
 
-	public static final String NAME_PARTNER_MARKETING_USER =
-		"Partner Marketing User";
+	public static final String NAME_PARTNER_MARKETING = "Partner Marketing";
 
-	public static final String NAME_PARTNER_MEMBER = "Partner Member";
+	public static final String NAME_PARTNER_NEW_USER = "Partner New User";
 
-	public static final String NAME_PARTNER_SALES_USER = "Partner Sales User";
+	public static final String NAME_PARTNER_PRE_SALES_TECHNICAL =
+		"Partner Pre-Sales Technical";
 
-	public static final String NAME_PARTNER_TECHNICAL_USER =
-		"Partner Technical User";
+	public static final String NAME_PARTNER_PRIMARY = "Partner Primary";
+
+	public static final String NAME_PARTNER_SALES = "Partner Sales";
+
+	public static final String NAME_PARTNER_SALES_AND_MARKETING =
+		"Partner Sales & Marketing";
 
 	public static final String NAME_PROVISIONING_MEMBER = "Provisioning Member";
 
 	public static final String NAME_REQUESTER = "Requester";
 
 	public static final String[] PARTNER_ACCOUNT_ROLES = {
-		NAME_PARTNER_MANAGER, NAME_PARTNER_MARKETING_USER, NAME_PARTNER_MEMBER,
-		NAME_PARTNER_SALES_USER, NAME_PARTNER_TECHNICAL_USER
+		NAME_PARTNER_DELIVERY_TECHNICAL, NAME_PARTNER_MARKETING,
+		NAME_PARTNER_NEW_USER, NAME_PARTNER_PRE_SALES_TECHNICAL,
+		NAME_PARTNER_PRIMARY, NAME_PARTNER_SALES,
+		NAME_PARTNER_SALES_AND_MARKETING
 	};
 
 	public static final String[] SUPPORT_ACCOUNT_ROLES = {

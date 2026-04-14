@@ -29,14 +29,14 @@ const getInitialColumns = (articleAccountSupportURL) => [
 		truncate: true,
 	},
 	{
-		accessor: 'supportSeat',
+		accessor: 'supportRole',
 		align: 'center',
 		bodyClass: 'border-0',
 
 		header: {
 			name: (
 				<div className="align-items-center d-flex justify-content-center">
-					<p className="m-0">{i18n.translate('support-seat')}</p>
+					<p className="m-0">{i18n.translate('support-role')}</p>
 
 					<PopoverIconButton
 						popoverLink={{
@@ -57,10 +57,10 @@ const getInitialColumns = (articleAccountSupportURL) => [
 		},
 	},
 	{
-		accessor: 'role',
+		accessor: 'partnerRole',
 		bodyClass: 'border-0',
 		header: {
-			name: i18n.translate('role'),
+			name: i18n.translate('partner-role'),
 			styles:
 				'h6 border-bottom text-neutral-10 font-weight-bold table-cell-expand-smaller',
 		},

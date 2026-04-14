@@ -344,37 +344,58 @@ export default function useUserAccountsByAccountExternalReferenceCode(
 		}
 
 		if (!Array.isArray(newAccountRoleItem)) {
-			updateContactRoles({
-				onCompleted: () =>
-					currentAccountRoles.map((currentAccountRole) => {
-						deleteContactRoles({
-							onCompleted: () =>
-								replaceAccountRole({
-									variables: {
-										currentAccountRoleId:
-											currentAccountRole.id,
-										emailAddress: userAccount.emailAddress,
-										externalReferenceCode,
-										newAccountRoleId:
-											newAccountRoleItem.value,
-									},
-								}),
-							variables: {
-								contactEmail: userAccount.emailAddress,
-								contactRoleNames:
-									currentContactRoleNameURLParameters.join(
-										'&'
-									),
-								externalReferenceCode,
-							},
-						});
-					}),
-				variables: {
-					contactEmail: userAccount.emailAddress,
-					contactRoleName: newContactRoleNameURLParameter,
-					externalReferenceCode,
-				},
-			});
+			if (newAccountRoleItem.value === 'None') {
+				currentAccountRoles.map((currentAccountRole) => {
+					deleteContactRoles({
+						onCompleted: () => {
+							deleteUserAccount({
+								variables: {
+									accountKey: project.accountKey,
+									accountRoleId: currentAccountRole.id,
+									emailAddress: userAccount.emailAddress,
+								}
+							});
+						},
+						variables: {
+							contactEmail: userAccount.emailAddress,
+							contactRoleNames: getRaysourceContactRoleNameURLParameter(currentAccountRole.name),
+							externalReferenceCode,
+						},
+					});
+				});
+			} else {
+				updateContactRoles({
+					onCompleted: () =>
+						currentAccountRoles.map((currentAccountRole) => {
+							deleteContactRoles({
+								onCompleted: () =>
+									replaceAccountRole({
+										variables: {
+											currentAccountRoleId:
+												currentAccountRole.id,
+											emailAddress: userAccount.emailAddress,
+											externalReferenceCode,
+											newAccountRoleId:
+												newAccountRoleItem.value,
+										},
+									}),
+								variables: {
+									contactEmail: userAccount.emailAddress,
+									contactRoleNames:
+										currentContactRoleNameURLParameters.join(
+											'&'
+										),
+									externalReferenceCode,
+								},
+							});
+						}),
+					variables: {
+						contactEmail: userAccount.emailAddress,
+						contactRoleName: newContactRoleNameURLParameter,
+						externalReferenceCode,
+					},
+				});
+			}
 		}
 	};
 
