@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
-import {ClayInput} from '@clayui/form';
+import {ClayInput, ClaySelect} from '@clayui/form';
 import ClayIcon from '@clayui/icon';
-import {useEffect, useMemo, useState} from 'react';
+import {useMemo} from 'react';
 import {useAppPropertiesContext} from '~/contexts/AppPropertiesContext';
 import useCurrentKoroneikiAccount from '~/hooks/useCurrentKoroneikiAccount';
 import useProvisioningLicenseKeys from '~/hooks/useProvisioningLicenseKeys';
-import RoleSelectorDropdown from '~/features/project/components/RoleSelectorDropdown';
 import useUserAccountsByAccountExternalReferenceCode from '~/features/project/pages/Project/TeamMembers/components/TeamMembersTable/hooks/useUserAccountsByAccountExternalReferenceCode';
 import i18n from '~/utils/I18n';
 import {Input} from '~/components';
@@ -22,11 +21,6 @@ import {
 } from '~/utils/validations.form';
 
 const FETCH_DELAY_AFTER_TYPING = 500;
-const partnerMemberRoles = [
-	ROLE_TYPES.partnerMarketingUser.key,
-	ROLE_TYPES.partnerSalesUser.key,
-	ROLE_TYPES.partnerTechnicalUser.key,
-];
 
 const TeamMemberInputs = ({
 	administratorsAssetsAvailable,
@@ -36,19 +30,12 @@ const TeamMemberInputs = ({
 	invite,
 	options,
 	placeholderEmail,
-	selectOnChange,
-	setRoleSelectorFilled,
+	projectHasPrioritySLA,
+	isPartnerProject,
+	setFieldValue,
 }) => {
 	const {accountSettingsURL} = useAppPropertiesContext();
 	const provisioningService = useProvisioningLicenseKeys();
-
-	const [radioOptions, setRadioOptions] = useState({});
-	const [selectedAccountRoleName, setSelectedAccountRoleName] = useState([]);
-	const [updateModal, setUpdateModal] = useState(0);
-
-	useEffect(() => {
-		setTimeout(() => setUpdateModal(new Date().getTime()), 500);
-	}, []);
 
 	const bannedDomains = useBannedDomains(
 		invite?.email,
@@ -113,7 +100,6 @@ const TeamMemberInputs = ({
 
 				return {
 					...option,
-					active: selectedAccountRoleName?.includes(option.label),
 					disabled:
 						administratorsAssetsAvailable !== -1 &&
 						administratorsAssetsAvailable === 0 &&
@@ -125,37 +111,40 @@ const TeamMemberInputs = ({
 			administratorsAssetsAvailable,
 			isAdministratorOrRequestorRoleSelected,
 			options,
-			selectedAccountRoleName,
 		]
 	);
 
-	useEffect(() => {
-		setRadioOptions(
-			optionsFormatted.reduce(
-				(previousItem, item) => {
-					if (!partnerMemberRoles.includes(item.label)) {
-						previousItem[item.label] = item;
+	const supportRoleOptions = useMemo(() => {
+		return optionsFormatted.filter(opt => !opt.key?.startsWith('Partner'));
+	}, [optionsFormatted]);
 
-						return previousItem;
-					}
+	const partnerRoleOptions = useMemo(() => {
+		return optionsFormatted.filter(opt => opt.key?.startsWith('Partner'));
+	}, [optionsFormatted]);
 
-					previousItem.partnerMemberRoles.roles.push(item);
-					previousItem.partnerMemberRoles.active = previousItem
-						.partnerMemberRoles.active
-						? true
-						: item.active;
+	const supportRoleId = useMemo(() => {
+		return invite?.role?.find(r => !r.key?.startsWith('Partner'))?.id || '';
+	}, [invite?.role]);
 
-					return previousItem;
-				},
-				{
-					partnerMemberRoles: {
-						active: false,
-						roles: []
-					}
-				}
-			)
-		);
-	}, [optionsFormatted, selectedAccountRoleName, setRadioOptions]);
+	const partnerRoleId = useMemo(() => {
+		return invite?.role?.find(r => r.key?.startsWith('Partner'))?.id || '';
+	}, [invite?.role]);
+
+	const handleRoleChange = (type, value) => {
+		const roleId = Number(value);
+		
+		let newSupportRole = invite?.role?.find(r => !r.key?.startsWith('Partner'));
+		let newPartnerRole = invite?.role?.find(r => r.key?.startsWith('Partner'));
+
+		if (type === 'support') {
+			newSupportRole = roleId ? options.find(o => o.value === roleId)?.role : null;
+		} else {
+			newPartnerRole = roleId ? options.find(o => o.value === roleId)?.role : null;
+		}
+
+		const updatedRoles = [newSupportRole, newPartnerRole].filter(Boolean);
+		setFieldValue(`invites[${id}].role`, updatedRoles);
+	};
 
 	return (
 		<>
@@ -200,30 +189,52 @@ const TeamMemberInputs = ({
 				</ClayInput.GroupItem>
 
 				<ClayInput.GroupItem className="m-0">
-					<div className="mx-3 my-1 role-selector-container w-100">
-						<div>
-							<span className="role-selector-label">
-								{i18n.translate('role')}
-							</span>
+					<div className="mx-3 my-1 role-selector-container w-100 d-flex flex-column justify-content-center">
+						{projectHasPrioritySLA && (
+							<div className="mb-2">
+								<span className="role-selector-label mb-1 d-block font-weight-semi-bold">
+									{i18n.translate('support-role')}
+								</span>
+								<ClaySelect
+									aria-label={i18n.translate('support-role')}
+									onChange={(e) => handleRoleChange('support', e.target.value)}
+									value={supportRoleId}
+								>
+									<ClaySelect.Option label={i18n.translate('none')} value="" />
+									{supportRoleOptions.map((opt) => (
+										<ClaySelect.Option
+											disabled={opt.disabled}
+											key={opt.value}
+											label={opt.label}
+											value={opt.value}
+										/>
+									))}
+								</ClaySelect>
+							</div>
+						)}
 
-							<span className="role-selector-required-icon">
-								{' '}
-								*
-							</span>
-						</div>
-
-						<RoleSelectorDropdown
-							isTeamMemberInviteForm
-							key={updateModal}
-							radioOptions={radioOptions}
-							selectOnChange={selectOnChange}
-							selectedAccountRoleName={selectedAccountRoleName}
-							setRadioOptions={setRadioOptions}
-							setRoleSelectorFilled={setRoleSelectorFilled}
-							setSelectedAccountRoleName={
-								setSelectedAccountRoleName
-							}
-						/>
+						{isPartnerProject && (
+							<div className="mb-2">
+								<span className="role-selector-label mb-1 d-block font-weight-semi-bold">
+									{i18n.translate('partner-role')}
+								</span>
+								<ClaySelect
+									aria-label={i18n.translate('partner-role')}
+									onChange={(e) => handleRoleChange('partner', e.target.value)}
+									value={partnerRoleId}
+								>
+									<ClaySelect.Option label={i18n.translate('none')} value="" />
+									{partnerRoleOptions.map((opt) => (
+										<ClaySelect.Option
+											disabled={opt.disabled}
+											key={opt.value}
+											label={opt.label}
+											value={opt.value}
+										/>
+									))}
+								</ClaySelect>
+							</div>
+						)}
 					</div>
 				</ClayInput.GroupItem>
 			</ClayInput.Group>

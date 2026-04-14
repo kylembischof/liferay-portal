@@ -78,7 +78,6 @@ const InviteTeamMembersPage = ({
 	const [isLoadingUserInvitation, setIsLoadingUserInvitation] =
 		useState(false);
 	const [showEmptyEmailError, setshowEmptyEmailError] = useState(false);
-	const [roleSelectorFilled, setRoleSelectorFilled] = useState(false);
 
 	const projectHasPrioritySLA =
 		project?.slaCurrent?.includes(SLA_TYPES.global) ||
@@ -88,6 +87,7 @@ const InviteTeamMembersPage = ({
 		project?.slaCurrent?.includes(SLA_TYPES.standard) ||
 		project?.slaCurrent?.includes(SLA_TYPES.strategic);
 
+	const isPartnerProject = project?.partner;
 
 	const isUnlimitedSupportSeats =
 		project.maxRequestors === MAXIMUM_SUPPORT_SEATS_DEFAULT;
@@ -126,6 +126,8 @@ const InviteTeamMembersPage = ({
 						disabled: false,
 						label: role.name,
 						value: role.id,
+						key: role.key,
+						role,
 					}))
 				);
 			}
@@ -410,7 +412,7 @@ const InviteTeamMembersPage = ({
 						disabled={
 							baseButtonDisabled ||
 							isLoadingUserInvitation ||
-							!roleSelectorFilled
+							!values?.invites?.every((invite) => invite?.role?.length > 0)
 						}
 						displayType="primary"
 						isLoading={isLoadingUserInvitation}
@@ -470,56 +472,9 @@ const InviteTeamMembersPage = ({
 											project?.code?.toLowerCase() ||
 											'example'
 										}.com`}
-										selectOnChange={(roleSelected) => {
-											const isPartnerMember =
-												roleSelected.partnerMemberRoles
-													.active;
-
-											if (isPartnerMember) {
-												const memberRoles =
-													roleSelected
-														.partnerMemberRoles
-														.roles;
-												const updatedMemberRoles =
-													memberRoles.filter(
-														(role) => role.active
-													);
-
-												return updatedMemberRoles?.map(
-													(updateRole, roleIndex) => {
-														setFieldValue(
-															`invites[${index}].role[${roleIndex}]`,
-															accountRoles?.find(
-																({id}) =>
-																	id ===
-																	+updateRole.value
-															)
-														);
-													}
-												);
-											}
-
-											const accountRoleItem =
-												Object.values(
-													roleSelected
-												).filter((role) => role.active);
-
-											return accountRoleItem?.map(
-												(updateRole, roleIndex) => {
-													setFieldValue(
-														`invites[${index}].role[${roleIndex}]`,
-														accountRoles?.find(
-															({id}) =>
-																id ===
-																+updateRole.value
-														)
-													);
-												}
-											);
-										}}
-										setRoleSelectorFilled={
-											setRoleSelectorFilled
-										}
+										projectHasPrioritySLA={projectHasPrioritySLA}
+										isPartnerProject={isPartnerProject}
+										setFieldValue={setFieldValue}
 									/>
 								))}
 							</ClayForm.Group>
@@ -567,7 +522,6 @@ const InviteTeamMembersPage = ({
 										className="btn-outline-primary cp-btn-add-members py-2 rounded-xs"
 										onClick={() => {
 											setBaseButtonDisabled(false);
-											setRoleSelectorFilled(false);
 
 											const hasEmptyEmails =
 												isAnyEmptyEmail();
