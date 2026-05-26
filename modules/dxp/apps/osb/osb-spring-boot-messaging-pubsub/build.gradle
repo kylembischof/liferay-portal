@@ -15,3 +15,11 @@ dependencies {
 	testImplementation group: "junit", name: "junit", version: "4.13.1"
 	testImplementation group: "org.apache.commons", name: "commons-lang3", version: "3.18.0"
 }
+
+test {
+	String emulatorHost = System.getenv("PUBSUB_EMULATOR_HOST")
+
+	if (emulatorHost) {
+		environment "PUBSUB_EMULATOR_HOST", emulatorHost
+	}
+}

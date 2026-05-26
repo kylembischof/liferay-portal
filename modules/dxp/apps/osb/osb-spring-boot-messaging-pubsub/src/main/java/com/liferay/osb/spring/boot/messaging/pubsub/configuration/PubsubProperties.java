@@ -17,12 +17,20 @@ public class PubsubProperties {
 		return _broker;
 	}
 
+	public String getEmulatorHost() {
+		return _emulatorHost;
+	}
+
 	public Subscriber getSubscriber() {
 		return _subscriber;
 	}
 
 	public void setBroker(Broker broker) {
 		_broker = broker;
+	}
+
+	public void setEmulatorHost(String emulatorHost) {
+		_emulatorHost = emulatorHost;
 	}
 
 	public void setSubscriber(Subscriber subscriber) {
@@ -58,6 +66,7 @@ public class PubsubProperties {
 	}
 
 	private Broker _broker = new Broker();
+	private String _emulatorHost;
 	private Subscriber _subscriber = new Subscriber();
 
 }

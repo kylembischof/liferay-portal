@@ -9,8 +9,12 @@ import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutureCallback;
 import com.google.api.core.ApiFutures;
 import com.google.api.gax.core.CredentialsProvider;
+import com.google.api.gax.core.NoCredentialsProvider;
+import com.google.api.gax.grpc.GrpcTransportChannel;
 import com.google.api.gax.retrying.RetrySettings;
+import com.google.api.gax.rpc.FixedTransportChannelProvider;
 import com.google.api.gax.rpc.NotFoundException;
+import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.cloud.pubsub.v1.TopicAdminClient;
 import com.google.cloud.pubsub.v1.TopicAdminSettings;
@@ -22,6 +26,9 @@ import com.google.pubsub.v1.TopicName;
 import com.liferay.osb.spring.boot.messaging.pubsub.Message;
 import com.liferay.osb.spring.boot.messaging.pubsub.configuration.PubsubProperties;
 import com.liferay.osb.spring.boot.messaging.pubsub.credentials.ServiceAccountCredentialsProvider;
+
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -56,6 +63,12 @@ public abstract class BaseMessageBroker implements MessageBroker {
 			).setEnableMessageOrdering(
 				true
 			);
+
+			TransportChannelProvider channelProvider = getChannelProvider();
+
+			if (channelProvider != null) {
+				builder.setChannelProvider(channelProvider);
+			}
 
 			RetrySettings retrySettings = buildRetrySettings();
 
@@ -109,6 +122,10 @@ public abstract class BaseMessageBroker implements MessageBroker {
 		catch (Exception exception) {
 			_log.error("Failed to shut down publishers", exception);
 		}
+
+		if (_emulatorChannel != null) {
+			_emulatorChannel.shutdownNow();
+		}
 	}
 
 	@PostConstruct
@@ -117,10 +134,21 @@ public abstract class BaseMessageBroker implements MessageBroker {
 			return;
 		}
 
-		TopicAdminSettings topicAdminSettings = TopicAdminSettings.newBuilder(
-		).setCredentialsProvider(
-			getCredentialsProvider()
-		).build();
+		TopicAdminSettings.Builder topicAdminSettingsBuilder =
+			TopicAdminSettings.newBuilder(
+			).setCredentialsProvider(
+				getCredentialsProvider()
+			);
+
+		TransportChannelProvider channelProvider = getChannelProvider();
+
+		if (channelProvider != null) {
+			topicAdminSettingsBuilder.setTransportChannelProvider(
+				channelProvider);
+		}
+
+		TopicAdminSettings topicAdminSettings =
+			topicAdminSettingsBuilder.build();
 
 		try (TopicAdminClient topicAdminClient = TopicAdminClient.create(
 				topicAdminSettings)) {
@@ -140,7 +168,31 @@ public abstract class BaseMessageBroker implements MessageBroker {
 		return null;
 	}
 
+	protected TransportChannelProvider getChannelProvider() {
+		String emulatorHost = System.getenv("PUBSUB_EMULATOR_HOST");
+
+		if ((emulatorHost == null) || emulatorHost.isEmpty()) {
+			return null;
+		}
+
+		if (_emulatorChannelProvider == null) {
+			_emulatorChannel = ManagedChannelBuilder.forTarget(
+				emulatorHost
+			).usePlaintext(
+			).build();
+
+			_emulatorChannelProvider = FixedTransportChannelProvider.create(
+				GrpcTransportChannel.create(_emulatorChannel));
+		}
+
+		return _emulatorChannelProvider;
+	}
+
 	protected CredentialsProvider getCredentialsProvider() throws Exception {
+		if (_isEmulatorEnabled()) {
+			return NoCredentialsProvider.create();
+		}
+
 		ServiceAccountCredentialsProvider serviceAccountCredentialsProvider =
 			getServiceAccountCredentialsProvider();
 
@@ -194,9 +246,21 @@ public abstract class BaseMessageBroker implements MessageBroker {
 		}
 	}
 
+	private boolean _isEmulatorEnabled() {
+		String emulatorHost = System.getenv("PUBSUB_EMULATOR_HOST");
+
+		if ((emulatorHost != null) && !emulatorHost.isEmpty()) {
+			return true;
+		}
+
+		return false;
+	}
+
 	private static final Logger _log = LoggerFactory.getLogger(
 		BaseMessageBroker.class);
 
+	private ManagedChannel _emulatorChannel;
+	private TransportChannelProvider _emulatorChannelProvider;
 	private final Map<String, Publisher> _publisherMap = new HashMap<>();
 
 }
