@@ -40,8 +40,12 @@ OAUTH_PORTLET="com_liferay_oauth2_provider_web_internal_portlet_OAuth2AdminPortl
 JAR=$(mktemp)
 trap 'rm -f "$JAR"' EXIT
 
-extract_p_auth() {
-	grep -oE 'p_auth=[A-Za-z0-9]+' | head -n1 | cut -d= -f2
+extract_auth_token() {
+	# The CSRF token for portlet ACTION URLs is the page's global Liferay.authToken.
+	# Do NOT grep for "p_auth=" — that also matches the per-portlet "p_p_auth="
+	# render tokens on the control-panel nav links, and submitting one of those as
+	# p_auth on the action POST fails CSRF validation with HTTP 403.
+	grep -oE "authToken: '[A-Za-z0-9]+'" | head -n1 | cut -d"'" -f2
 }
 
 find_app_id_by_client_id() {
@@ -89,10 +93,10 @@ for entry in re.split(r"<li\s+class=\"list-group-item[^\"]*\"", html)[1:]:
 '
 }
 
-# Seed cookie jar + harvest pre-login p_auth from the maximized login portlet.
+# Seed cookie jar + harvest the pre-login CSRF token from the maximized login portlet.
 LOGIN_HTML=$(curl --silent --cookie-jar "$JAR" --cookie "$JAR" \
 	"${PORTAL_BASE}/web/guest/home?p_p_id=${LOGIN_PORTLET}&p_p_state=maximized")
-P_AUTH=$(echo "$LOGIN_HTML" | extract_p_auth)
+P_AUTH=$(echo "$LOGIN_HTML" | extract_auth_token)
 
 # POST login. The cookie jar now carries the authenticated session.
 curl --silent --cookie-jar "$JAR" --cookie "$JAR" --location --output /dev/null \
@@ -112,10 +116,10 @@ USER_ID=$(curl --silent --user "${ADMIN_EMAIL}:${ADMIN_PASSWORD}" \
 	--data-urlencode "fields=id" \
 	| python3 -c 'import sys,json;print(json.load(sys.stdin)["items"][0]["id"])')
 
-# Harvest a fresh p_auth bound to the authenticated session. Reused for all
+# Harvest a fresh CSRF token bound to the authenticated session. Reused for all
 # subsequent ActionURL POSTs against the OAuth2 admin portlet.
 OAUTH_LIST_URL="${PORTAL_BASE}/group/control_panel/manage?p_p_id=${OAUTH_PORTLET}&p_p_lifecycle=0&p_p_state=maximized"
-P_AUTH=$(curl --silent --cookie-jar "$JAR" --cookie "$JAR" "$OAUTH_LIST_URL" | extract_p_auth)
+P_AUTH=$(curl --silent --cookie-jar "$JAR" --cookie "$JAR" "$OAUTH_LIST_URL" | extract_auth_token)
 
 UPDATE_ACTION="${PORTAL_BASE}/group/control_panel/manage?p_p_id=${OAUTH_PORTLET}&p_p_lifecycle=1&_${OAUTH_PORTLET}_jakarta.portlet.action=%2Foauth2_provider%2Fupdate_oauth2_application&p_auth=${P_AUTH}"
 
@@ -213,7 +217,7 @@ Omitting `scope=` gives you every granted alias in the JWT and HTTP 400 from Tom
 - **`scopeAliases` is a repeated field**, not comma-separated. One `--data-urlencode` per alias. The server splits each value on spaces, so space-separated alias groups (as scraped from the checkbox values) work fine.
 - **Scope discovery requires `navigation=assign_scopes`** in the render URL. Without it, `edit_application.jsp` defaults to the credentials view and renders no scope checkboxes.
 - **Scope filter is by description text, not alias name.** The script splits the page into `<li class="list-group-item ...">` blocks and only keeps aliases whose `<label>` contains **both** "create/update/delete data on your behalf" and "read data on your behalf". This selects the unified `.everything` scope for each resource and skips the narrower `.write`-only and `.read`-only variants (which would be redundant), plus analytics reads, personal profile reads, document downloads, and unlabeled entries (e.g. `COMMERCE_DEFAULT`).
-- **`p_auth` rotates per session.** Harvest it once after login (against the OAuth2 admin page so it's bound to the authenticated session) and reuse for every subsequent POST.
+- **The action `p_auth` is the page's global `Liferay.authToken`, not a `p_auth=` query param.** The control-panel chrome renders many per-portlet `p_p_auth=` *render* tokens on its nav links; grepping `p_auth=` matches those and yields a token that fails CSRF validation with HTTP 403 on the action POST. Extract `authToken: '<value>'` (the `Liferay.authToken` JS var) instead. It is bound to the authenticated session — harvest once after login and reuse for every subsequent POST.
 - **Locating the new app's id requires row-scoping** because the list page contains `oAuth2ApplicationId=N` URLs for every app. The Python helper scopes to the `<tr>` containing `APP_CLIENT_ID`.
 - **First-run password reset / TOS** — on a freshly bootstrapped portal this gate is bypassed, but if a future Liferay version reintroduces it the script exits with "Login failed — no ID cookie in jar". Drive `chrome-devtools` for that one login, then re-run this script.
 
