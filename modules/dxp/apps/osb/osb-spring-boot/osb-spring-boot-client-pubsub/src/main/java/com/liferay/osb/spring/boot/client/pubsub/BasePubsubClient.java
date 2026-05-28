@@ -6,13 +6,20 @@
 package com.liferay.osb.spring.boot.client.pubsub;
 
 import com.google.api.gax.core.CredentialsProvider;
+import com.google.api.gax.core.NoCredentialsProvider;
+import com.google.api.gax.grpc.GrpcTransportChannel;
 import com.google.api.gax.rpc.AlreadyExistsException;
+import com.google.api.gax.rpc.FixedTransportChannelProvider;
 import com.google.api.gax.rpc.NotFoundException;
+import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.cloud.pubsub.v1.TopicAdminClient;
 import com.google.cloud.pubsub.v1.TopicAdminSettings;
 import com.google.pubsub.v1.TopicName;
 
 import com.liferay.osb.spring.boot.client.pubsub.credentials.ServiceAccountCredentialsProvider;
+
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,14 +31,28 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 public abstract class BasePubsubClient {
 
+	protected void closeEmulatorChannel() {
+		if (_emulatorChannel != null) {
+			_emulatorChannel.shutdownNow();
+		}
+	}
+
 	protected void ensureTopicExists(String topic) throws Exception {
-		TopicAdminSettings topicAdminSettings = TopicAdminSettings.newBuilder(
-		).setCredentialsProvider(
-			getCredentialsProvider()
-		).build();
+		TopicAdminSettings.Builder topicAdminSettingsBuilder =
+			TopicAdminSettings.newBuilder(
+			).setCredentialsProvider(
+				getCredentialsProvider()
+			);
+
+		TransportChannelProvider channelProvider = getChannelProvider();
+
+		if (channelProvider != null) {
+			topicAdminSettingsBuilder.setTransportChannelProvider(
+				channelProvider);
+		}
 
 		try (TopicAdminClient topicAdminClient = TopicAdminClient.create(
-				topicAdminSettings)) {
+				topicAdminSettingsBuilder.build())) {
 
 			_ensureTopicExists(topicAdminClient, topic);
 
@@ -41,7 +62,33 @@ public abstract class BasePubsubClient {
 		}
 	}
 
+	protected TransportChannelProvider getChannelProvider() {
+		String emulatorHost = System.getenv("PUBSUB_EMULATOR_HOST");
+
+		if ((emulatorHost == null) || emulatorHost.isEmpty()) {
+			return null;
+		}
+
+		if (_emulatorChannelProvider == null) {
+			_emulatorChannel = ManagedChannelBuilder.forTarget(
+				emulatorHost
+			).usePlaintext(
+			).build();
+
+			_emulatorChannelProvider = FixedTransportChannelProvider.create(
+				GrpcTransportChannel.create(_emulatorChannel));
+		}
+
+		return _emulatorChannelProvider;
+	}
+
 	protected CredentialsProvider getCredentialsProvider() throws Exception {
+		String emulatorHost = System.getenv("PUBSUB_EMULATOR_HOST");
+
+		if ((emulatorHost != null) && !emulatorHost.isEmpty()) {
+			return NoCredentialsProvider.create();
+		}
+
 		return _serviceAccountCredentialsProvider.getCredentialsProvider();
 	}
 
@@ -94,6 +141,9 @@ public abstract class BasePubsubClient {
 
 	private static final Logger _log = LoggerFactory.getLogger(
 		BasePubsubClient.class);
+
+	private ManagedChannel _emulatorChannel;
+	private TransportChannelProvider _emulatorChannelProvider;
 
 	@Autowired
 	private ServiceAccountCredentialsProvider

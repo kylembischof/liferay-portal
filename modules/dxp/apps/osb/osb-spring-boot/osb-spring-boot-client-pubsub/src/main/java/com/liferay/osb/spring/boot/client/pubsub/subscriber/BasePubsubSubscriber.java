@@ -7,6 +7,7 @@ package com.liferay.osb.spring.boot.client.pubsub.subscriber;
 
 import com.google.api.gax.rpc.AlreadyExistsException;
 import com.google.api.gax.rpc.NotFoundException;
+import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.cloud.pubsub.v1.Subscriber;
@@ -55,7 +56,7 @@ public abstract class BasePubsubSubscriber extends BasePubsubClient {
 			_ensureSubscriptionExists(projectSubscriptionName, getTopic());
 		}
 
-		_subscriber = Subscriber.newBuilder(
+		Subscriber.Builder subscriberBuilder = Subscriber.newBuilder(
 			projectSubscriptionName,
 			new MessageReceiver() {
 
@@ -84,7 +85,15 @@ public abstract class BasePubsubSubscriber extends BasePubsubClient {
 			}
 		).setCredentialsProvider(
 			getCredentialsProvider()
-		).build();
+		);
+
+		TransportChannelProvider channelProvider = getChannelProvider();
+
+		if (channelProvider != null) {
+			subscriberBuilder.setChannelProvider(channelProvider);
+		}
+
+		_subscriber = subscriberBuilder.build();
 
 		_subscriber.startAsync(
 		).awaitRunning();
@@ -113,6 +122,8 @@ public abstract class BasePubsubSubscriber extends BasePubsubClient {
 				_log.error("Unable to stop the subscriber", exception);
 			}
 		}
+
+		closeEmulatorChannel();
 	}
 
 	protected int getAckDeadlineSeconds() {
@@ -139,14 +150,22 @@ public abstract class BasePubsubSubscriber extends BasePubsubClient {
 			ProjectSubscriptionName projectSubscriptionName, String topic)
 		throws Exception {
 
-		SubscriptionAdminSettings subscriptionAdminSettings =
+		SubscriptionAdminSettings.Builder subscriptionAdminSettingsBuilder =
 			SubscriptionAdminSettings.newBuilder(
 			).setCredentialsProvider(
 				getCredentialsProvider()
-			).build();
+			);
+
+		TransportChannelProvider channelProvider = getChannelProvider();
+
+		if (channelProvider != null) {
+			subscriptionAdminSettingsBuilder.setTransportChannelProvider(
+				channelProvider);
+		}
 
 		try (SubscriptionAdminClient subscriptionAdminClient =
-				SubscriptionAdminClient.create(subscriptionAdminSettings)) {
+				SubscriptionAdminClient.create(
+					subscriptionAdminSettingsBuilder.build())) {
 
 			try {
 				subscriptionAdminClient.getSubscription(

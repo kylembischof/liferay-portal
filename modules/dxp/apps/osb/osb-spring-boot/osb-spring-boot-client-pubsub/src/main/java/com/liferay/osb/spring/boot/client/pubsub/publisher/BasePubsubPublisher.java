@@ -7,6 +7,7 @@ package com.liferay.osb.spring.boot.client.pubsub.publisher;
 
 import com.google.api.core.ApiFuture;
 import com.google.api.gax.retrying.RetrySettings;
+import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.PubsubMessage;
@@ -63,6 +64,8 @@ public abstract class BasePubsubPublisher extends BasePubsubClient {
 		catch (Exception exception) {
 			_log.error("Unable to shut down publishers", exception);
 		}
+
+		closeEmulatorChannel();
 	}
 
 	protected RetrySettings buildRetrySettings() {
@@ -126,6 +129,12 @@ public abstract class BasePubsubPublisher extends BasePubsubClient {
 		).setEnableMessageOrdering(
 			true
 		);
+
+		TransportChannelProvider channelProvider = getChannelProvider();
+
+		if (channelProvider != null) {
+			builder.setChannelProvider(channelProvider);
+		}
 
 		RetrySettings retrySettings = buildRetrySettings();
 
