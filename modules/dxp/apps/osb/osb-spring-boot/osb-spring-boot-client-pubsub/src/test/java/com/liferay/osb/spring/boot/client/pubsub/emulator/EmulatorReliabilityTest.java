@@ -100,7 +100,7 @@ public class EmulatorReliabilityTest {
 		Assert.assertTrue(
 			deadLetterPolicy.getDeadLetterTopic(
 			).endsWith(
-				_NAMESPACE + "dead-letter-dlq"
+				_NAMESPACE + "dead-letter"
 			));
 	}
 

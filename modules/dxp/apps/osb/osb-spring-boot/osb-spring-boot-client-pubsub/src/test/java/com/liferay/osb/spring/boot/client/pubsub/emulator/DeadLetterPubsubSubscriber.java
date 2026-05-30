@@ -29,7 +29,7 @@ public class DeadLetterPubsubSubscriber extends BasePubsubSubscriber {
 
 	@Override
 	protected String getTopic() {
-		return "dead-letter";
+		return "needs-dlq";
 	}
 
 	@Override
