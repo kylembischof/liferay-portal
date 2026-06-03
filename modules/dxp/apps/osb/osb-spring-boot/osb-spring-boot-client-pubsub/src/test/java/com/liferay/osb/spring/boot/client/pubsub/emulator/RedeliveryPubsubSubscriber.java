@@ -45,7 +45,7 @@ public class RedeliveryPubsubSubscriber extends BasePubsubSubscriber {
 	}
 
 	@Override
-	protected boolean isDeadLetterEnabled() {
+	protected boolean isDeadLetterTopicEnabled() {
 		return false;
 	}
 

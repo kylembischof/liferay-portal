@@ -38,7 +38,7 @@ public class AccountCreatedPublisher extends BasePubsubPublisher {
 	}
 
 	@Override
-	protected boolean isDeadLetterEnabled() {
+	protected boolean isDeadLetterTopicEnabled() {
 		return false;
 	}
 
