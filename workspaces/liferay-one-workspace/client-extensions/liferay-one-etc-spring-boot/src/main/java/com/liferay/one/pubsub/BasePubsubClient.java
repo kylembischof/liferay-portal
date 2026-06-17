@@ -75,9 +75,7 @@ public abstract class BasePubsubClient {
 		}
 		catch (NotFoundException notFoundException) {
 			if (_log.isDebugEnabled()) {
-				_log.debug(
-					"Unable to find topic. Creating topic " + topicName,
-					notFoundException);
+				_log.debug("Creating topic " + topicName, notFoundException);
 			}
 
 			topicAdminClient.createTopic(topicName);
